@@ -9,9 +9,13 @@ const {
   forgotPassword,
   resetPassword,
   logout,
-  getMe
+  getMe,
+  checkUsername,
+  checkEmail
 } = require('../controllers/authController');
 
+router.get('/check-username', checkUsername);
+router.get('/check-email', checkEmail);
 router.post('/register', register);
 router.post('/verify-otp', verifyOtp);
 router.post('/resend-otp', resendOtp);

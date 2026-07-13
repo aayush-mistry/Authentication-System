@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Auth System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="auth-container">
+    <h2>Create an Account</h2>
+    <p class="subtitle">Join us to experience the best platform</p>
+    
+    <form id="register-form">
+      
+      <!-- Username -->
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div style="position: relative;">
+          <input type="text" id="username" class="form-control" placeholder="Choose a unique username" required autocomplete="off">
+          <i id="username-icon" class="input-status fas"></i>
+        </div>
+        <span id="username-feedback" class="feedback-text"></span>
+        <div id="username-suggestions" class="suggestions"></div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <div style="position: relative;">
+          <input type="email" id="email" class="form-control" placeholder="Enter your email" required autocomplete="off">
+          <i id="email-icon" class="input-status fas"></i>
+        </div>
+        <span id="email-feedback" class="feedback-text"></span>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" class="form-control" placeholder="Create a strong password" required>
+          <button type="button" class="toggle-password" onclick="togglePassword('password', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        
+        <!-- Strength Meter -->
+        <div class="strength-meter">
+          <div id="strength-bar" class="strength-bar"></div>
+        </div>
+        <span id="strength-text" class="strength-text"></span>
+
+        <!-- Password Suggestion Box -->
+        <div id="suggestion-box">
+          <span style="font-size: 0.8rem; color: var(--text-muted)">Strong Suggestion:</span>
+          <br>
+          <span id="suggested-password" style="font-weight: 700; color: var(--primary-color)"></span>
+          <button type="button" id="use-suggestion-btn" style="margin-top: 8px; font-size: 0.75rem; padding: 4px 8px; background: var(--primary-color); border: none; border-radius: 4px; color: white; cursor: pointer;">Use Suggested Password</button>
+        </div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label for="confirmPassword">Confirm Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="confirmPassword" class="form-control" placeholder="Repeat your password" required>
+          <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <span id="confirm-feedback" class="feedback-text"></span>
+      </div>
+
+      <button type="submit" id="register-btn" class="btn">
+        <span class="btn-text">Create Account</span>
+        <div class="spinner"></div>
+      </button>
+
+    </form>
+
+    <div class="auth-links">
+      Already have an account? <a href="login.html">Log In</a>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+</body>
+</html>

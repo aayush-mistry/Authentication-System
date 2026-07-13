@@ -256,6 +256,52 @@ const getMe = async (req, res) => {
   }
 };
 
+// @desc    Check if username is available (Phase 3)
+// @route   GET /api/auth/check-username
+const checkUsername = async (req, res) => {
+  try {
+    const { username } = req.query;
+    if (!username) return res.status(400).json({ message: 'Username query required' });
+
+    const user = await User.findByUsername(username);
+    if (!user) {
+      return res.status(200).json({ available: true });
+    }
+
+    // Generate suggestions if unavailable
+    const year = new Date().getFullYear();
+    const suggestions = [
+      `${username}123`,
+      `${username}${year}`,
+      `${username}_dev`,
+      `${username}07`
+    ];
+    res.status(200).json({ available: false, suggestions });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @desc    Check if email is available (Phase 3)
+// @route   GET /api/auth/check-email
+const checkEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ message: 'Email query required' });
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(200).json({ available: true });
+    }
+    
+    res.status(200).json({ available: false, message: 'Already Registered' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
 module.exports = {
   register,
   verifyOtp,
@@ -264,5 +310,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   logout,
-  getMe
+  getMe,
+  checkUsername,
+  checkEmail
 };
