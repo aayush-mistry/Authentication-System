@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Auth System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Dark Mode specific variables handled in body.dark-mode */
+    body.dark-mode {
+      --bg-gradient-1: #000000;
+      --bg-gradient-2: #111111;
+      --glass-bg: rgba(20, 20, 20, 0.6);
+      --glass-border: rgba(255, 255, 255, 0.05);
+    }
+    
+    .dashboard-container {
+      max-width: 800px;
+      width: 100%;
+      padding: 30px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 20px;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: none;
+      color: var(--text-main);
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+    .theme-toggle:hover { color: var(--primary-color); }
+
+    .profile-card {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .profile-card { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="auth-container dashboard-container">
+    <div class="header">
+      <h2>Welcome, <span id="display-name">User</span>!</h2>
+      <div>
+        <button id="theme-toggle" class="theme-toggle"><i class="fas fa-moon"></i></button>
+        <button id="logout-btn" class="btn" style="display:inline-block; width:auto; padding:8px 16px; margin-left:10px;">Logout</button>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <!-- Profile Info -->
+      <div>
+        <h3>Profile Information</h3>
+        <p style="color:var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Manage your account details</p>
+        
+        <form id="profile-form">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="profile-username" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="profile-email" class="form-control" required>
+          </div>
+          <button type="submit" id="update-profile-btn" class="btn">
+            <span class="btn-text">Update Profile</span><div class="spinner"></div>
+          </button>
+        </form>
+      </div>
+
+      <!-- Security Settings -->
+      <div>
+        <h3>Security Settings</h3>
+        <p style="color:var(--text-muted); margin-bottom: 20px; font-size: 0.9rem;">Manage your password & devices</p>
+        
+        <form id="password-form">
+          <div class="form-group">
+            <label>Current Password</label>
+            <input type="password" id="current-password" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>New Password</label>
+            <input type="password" id="new-password" class="form-control" required>
+          </div>
+          <button type="submit" id="update-password-btn" class="btn" style="background:var(--warning)">
+            <span class="btn-text">Change Password</span><div class="spinner"></div>
+          </button>
+        </form>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+          <button id="logout-all-btn" class="btn" style="background:var(--primary-hover); margin-bottom: 10px;">
+            <span class="btn-text"><i class="fas fa-shield-alt"></i> Logout of All Devices</span>
+            <div class="spinner"></div>
+          </button>
+          
+          <button id="delete-account-btn" class="btn" style="background:var(--error);">
+            <span class="btn-text"><i class="fas fa-trash"></i> Delete Account</span>
+            <div class="spinner"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

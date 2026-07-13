@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Auth System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="auth-container">
+    <h2>Welcome Back</h2>
+    <p class="subtitle">Log in to your account to continue</p>
+    
+    <form id="login-form">
+      <div class="form-group">
+        <label for="loginId">Username or Email</label>
+        <input type="text" id="loginId" class="form-control" placeholder="Enter username or email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+          <button type="button" class="toggle-password" onclick="togglePassword('password', this)">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div style="text-align: right; margin-top: 8px;">
+          <a href="forgot-password.html" style="color: var(--primary-color); font-size: 0.8rem; text-decoration: none;">Forgot Password?</a>
+        </div>
+      </div>
+
+      <button type="submit" id="login-btn" class="btn">
+        <span class="btn-text">Log In</span>
+        <div class="spinner"></div>
+      </button>
+    </form>
+
+    <div class="auth-links">
+      Don't have an account? <a href="register.html">Sign Up</a>
+    </div>
+  </div>
+
+  <script src="js/login.js"></script>
+</body>
+</html>
