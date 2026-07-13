@@ -7,8 +7,8 @@ const sendEmail = require('../utils/email');
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // Helper to generate JWT token and set cookie
-const generateTokenAndSetCookie = (res, userId) => {
-  const token = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+const generateTokenAndSetCookie = (res, userId, tokenVersion) => {
+  const token = jwt.sign({ id: userId, version: tokenVersion }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN,
   });
 
@@ -157,11 +157,11 @@ const login = async (req, res) => {
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
     // Generate token and set cookie
-    generateTokenAndSetCookie(res, user.id);
+    generateTokenAndSetCookie(res, user.id, user.token_version);
 
     res.status(200).json({
       message: 'Login successful',
-      user: { id: user.id, username: user.username, email: user.email }
+      user: { id: user.id, username: user.username, email: user.email, profile_picture: user.profile_picture }
     });
   } catch (error) {
     console.error(error);

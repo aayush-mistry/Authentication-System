@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const protect = (req, res, next) => {
-  // We expect the JWT to be inside an HttpOnly cookie named 'token'
+const protect = async (req, res, next) => {
   let token = req.cookies.token;
 
   if (!token) {
@@ -9,11 +9,20 @@ const protect = (req, res, next) => {
   }
 
   try {
-    // Verify the token signature using our secret
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Attach the user ID to the request object so the controller can use it
-    req.userId = decoded.id;
+    // Fetch user to check token_version
+    const user = await User.findById(decoded.id);
+    
+    if (!user) {
+       return res.status(401).json({ message: 'User no longer exists' });
+    }
+
+    if (user.token_version !== decoded.version) {
+       return res.status(401).json({ message: 'Session expired. Please log in again.' });
+    }
+    
+    req.userId = user.id;
     next();
   } catch (error) {
     console.error("JWT Verification failed:", error.message);

@@ -19,10 +19,10 @@ class User {
     return rows[0];
   }
 
-  // Create a new user
+  // Create a new user (with token_version)
   static async create(username, email, hashedPassword, otpHash, otpExpiresAt) {
     const [result] = await db.execute(
-      'INSERT INTO users (username, email, password, is_verified, otp, otp_expires_at) VALUES (?, ?, ?, false, ?, ?)',
+      'INSERT INTO users (username, email, password, is_verified, otp, otp_expires_at, token_version) VALUES (?, ?, ?, false, ?, ?, 0)',
       [username, email, hashedPassword, otpHash, otpExpiresAt]
     );
     return result.insertId;
@@ -44,12 +44,27 @@ class User {
     );
   }
 
-  // Update user's password (clear OTP as well)
+  // Update user's password and increment token_version to logout from other devices
   static async updatePassword(userId, newHashedPassword) {
     await db.execute(
-      'UPDATE users SET password = ?, otp = NULL, otp_expires_at = NULL WHERE id = ?',
+      'UPDATE users SET password = ?, otp = NULL, otp_expires_at = NULL, token_version = token_version + 1 WHERE id = ?',
       [newHashedPassword, userId]
     );
+  }
+
+  // Increment token_version (Logout of all devices)
+  static async incrementTokenVersion(userId) {
+    await db.execute('UPDATE users SET token_version = token_version + 1 WHERE id = ?', [userId]);
+  }
+
+  // Update Profile
+  static async updateProfile(userId, username, email) {
+    await db.execute('UPDATE users SET username = ?, email = ? WHERE id = ?', [username, email, userId]);
+  }
+
+  // Delete Account
+  static async deleteAccount(userId) {
+    await db.execute('DELETE FROM users WHERE id = ?', [userId]);
   }
 }
 
