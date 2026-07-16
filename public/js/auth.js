@@ -133,89 +133,169 @@ if (emailInput) {
 ========================================= */
 
 const passwordInput = document.getElementById('password');
-if (passwordInput) {
-  passwordInput.addEventListener('input', (e) => {
-    const password = e.target.value;
-    const strengthBar = document.getElementById('strength-bar');
-    const strengthText = document.getElementById('strength-text');
-    const suggestionBox = document.getElementById('suggestion-box');
-    const suggestedPasswordSpan = document.getElementById('suggested-password');
-
-    if (!password) {
-      strengthBar.className = 'strength-bar';
-      strengthText.textContent = '';
-      suggestionBox.style.display = 'none';
-      return;
-    }
-
-    // Regex Checks
-    const hasLower = /[a-z]/.test(password);
-    const hasUpper = /[A-Z]/.test(password);
-    const hasNumber = /\d/.test(password);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const isLongEnough = password.length >= 8;
-
-    let strength = 0;
-    if (isLongEnough) strength += 1;
-    if (hasLower && hasUpper) strength += 1;
-    if (hasNumber) strength += 1;
-    if (hasSpecial) strength += 1;
-
-    strengthBar.className = 'strength-bar';
-    if (strength <= 1 || password.length < 8) {
-      strengthBar.classList.add('strength-weak');
-      strengthText.textContent = 'Weak';
-      strengthText.style.color = 'var(--error)';
-    } else if (strength === 2) {
-      strengthBar.classList.add('strength-medium');
-      strengthText.textContent = 'Medium';
-      strengthText.style.color = 'var(--warning)';
-    } else if (strength === 3) {
-      strengthBar.classList.add('strength-strong');
-      strengthText.textContent = 'Strong';
-      strengthText.style.color = 'var(--success)';
-    } else if (strength >= 4) {
-      strengthBar.classList.add('strength-very-strong');
-      strengthText.textContent = 'Very Strong';
-      strengthText.style.color = 'var(--primary-color)';
-    }
-
-    // Suggest strong password if weak/medium
-    if (strength <= 2) {
-      const generated = generateStrongPassword();
-      suggestedPasswordSpan.textContent = generated;
-      suggestionBox.style.display = 'block';
-    } else {
-      suggestionBox.style.display = 'none';
-    }
-  });
-}
-
-// Generate a random strong password
-const generateStrongPassword = () => {
-  const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-  let pass = "";
-  // Ensure at least one of each required type
-  pass += "A"; // Upper
-  pass += "a"; // Lower
-  pass += "1"; // Number
-  pass += "@"; // Special
-  for (let i = 0; i < 8; i++) {
-    pass += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  // Shuffle it (simple shuffle)
-  return pass.split('').sort(() => 0.5 - Math.random()).join('');
+const confirmPasswordInput = document.getElementById('confirmPassword');
+const strengthConfig = {
+  Weak: { className: 'strength-weak', icon: '🔴', color: 'var(--error)' },
+  Medium: { className: 'strength-medium', icon: '🟡', color: 'var(--warning)' },
+  Strong: { className: 'strength-strong', icon: '🟢', color: 'var(--success)' },
+  'Very Strong': { className: 'strength-very-strong', icon: '💚', color: '#047857' }
 };
 
-// Use Suggested Password
-const useSuggestionBtn = document.getElementById('use-suggestion-btn');
-if (useSuggestionBtn) {
-  useSuggestionBtn.addEventListener('click', () => {
-    const suggested = document.getElementById('suggested-password').textContent;
-    document.getElementById('password').value = suggested;
-    document.getElementById('confirmPassword').value = suggested;
-    document.getElementById('password').dispatchEvent(new Event('input')); // update meter
+const evaluatePasswordStrength = (password = '') => {
+  const checks = {
+    minLength: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+    longBonus: password.length > 12
+  };
+
+  const baseScore = [
+    checks.minLength,
+    checks.uppercase,
+    checks.lowercase,
+    checks.number,
+    checks.special
+  ].filter(Boolean).length;
+  const score = baseScore + (checks.longBonus ? 1 : 0);
+
+  let label = 'Weak';
+  if (score >= 6) label = 'Very Strong';
+  else if (score >= 5) label = 'Strong';
+  else if (score >= 3) label = 'Medium';
+
+  return { checks, score, label, isAcceptable: baseScore === 5 };
+};
+
+const getRandomItem = (items) => {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return items[values[0] % items.length];
+};
+
+const shuffleSecure = (characters) => {
+  const result = [...characters];
+  for (let i = result.length - 1; i > 0; i--) {
+    const values = new Uint32Array(1);
+    crypto.getRandomValues(values);
+    const j = values[0] % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result.join('');
+};
+
+const generateStrongPassword = (length = 14) => {
+  const groups = [
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+    'abcdefghijklmnopqrstuvwxyz',
+    '0123456789',
+    '!@#$%^&*'
+  ];
+  const allChars = groups.join('');
+  const chars = groups.map((group) => getRandomItem(group));
+
+  while (chars.length < length) {
+    chars.push(getRandomItem(allChars));
+  }
+
+  return shuffleSecure(chars);
+};
+
+const updateRequirements = (checks) => {
+  document.querySelectorAll('#password-requirements [data-requirement]').forEach((item) => {
+    const requirement = item.dataset.requirement;
+    const isMet = Boolean(checks[requirement]);
+    item.classList.toggle('met', isMet);
+    item.querySelector('.requirement-icon').textContent = isMet ? '✓' : '✗';
   });
+};
+
+const renderPasswordSuggestions = () => {
+  const suggestionsContainer = document.getElementById('password-suggestions');
+  if (!suggestionsContainer) return;
+
+  suggestionsContainer.innerHTML = '';
+  Array.from({ length: 3 }, () => generateStrongPassword()).forEach((suggestion) => {
+    const row = document.createElement('div');
+    row.className = 'password-suggestion';
+
+    const value = document.createElement('code');
+    value.textContent = suggestion;
+
+    const useButton = document.createElement('button');
+    useButton.type = 'button';
+    useButton.className = 'use-password-btn';
+    useButton.textContent = 'Use';
+    useButton.addEventListener('click', () => {
+      passwordInput.value = suggestion;
+      passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
+      passwordInput.focus();
+    });
+
+    row.append(value, useButton);
+    suggestionsContainer.appendChild(row);
+  });
+};
+
+const updateConfirmPasswordFeedback = () => {
+  if (!confirmPasswordInput || !passwordInput) return;
+
+  const feedback = document.getElementById('confirm-feedback');
+  const confirmValue = confirmPasswordInput.value;
+
+  if (!confirmValue) {
+    feedback.textContent = '';
+    feedback.className = 'feedback-text';
+    return;
+  }
+
+  const matches = confirmValue === passwordInput.value;
+  feedback.textContent = matches ? '✅ Passwords Match' : '❌ Passwords Do Not Match';
+  feedback.className = `feedback-text ${matches ? 'success' : 'error'}`;
+};
+
+const updatePasswordStrengthUI = () => {
+  if (!passwordInput) return evaluatePasswordStrength('');
+
+  const password = passwordInput.value;
+  const strengthBar = document.getElementById('strength-bar');
+  const strengthText = document.getElementById('strength-text');
+  const suggestionBox = document.getElementById('suggestion-box');
+  const result = evaluatePasswordStrength(password);
+  const config = strengthConfig[result.label];
+
+  strengthBar.className = 'strength-bar';
+  updateRequirements(result.checks);
+
+  if (!password) {
+    strengthText.textContent = '';
+    suggestionBox.style.display = 'none';
+    updateConfirmPasswordFeedback();
+    return result;
+  }
+
+  strengthBar.classList.add(config.className);
+  strengthText.textContent = `${config.icon} ${result.label}`;
+  strengthText.style.color = config.color;
+
+  if (result.label === 'Weak' || result.label === 'Medium') {
+    renderPasswordSuggestions();
+    suggestionBox.style.display = 'block';
+  } else {
+    suggestionBox.style.display = 'none';
+  }
+
+  updateConfirmPasswordFeedback();
+  return result;
+};
+
+if (passwordInput) {
+  passwordInput.addEventListener('input', updatePasswordStrengthUI);
+}
+
+if (confirmPasswordInput) {
+  confirmPasswordInput.addEventListener('input', updateConfirmPasswordFeedback);
 }
 
 /* =========================================
@@ -235,6 +315,12 @@ if (registerForm) {
       return;
     } else {
       document.getElementById('confirm-feedback').textContent = "";
+    }
+
+    const strengthResult = updatePasswordStrengthUI();
+    if (!strengthResult.isAcceptable) {
+      showToast('Use at least 8 characters with uppercase, lowercase, number, and special character.', 'error');
+      return;
     }
 
     // Set loading state

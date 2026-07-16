@@ -12,6 +12,7 @@
   --error: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
+  --strong-success: #047857;
 }
 
 * {
@@ -40,7 +41,7 @@ body {
   padding: 40px;
   border-radius: 24px;
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.6s ease-out;
 }
@@ -155,9 +156,9 @@ body {
 
 /* Password Strength */
 .strength-meter {
-  height: 4px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  border-radius: 999px;
   margin-top: 8px;
   overflow: hidden;
 }
@@ -165,7 +166,8 @@ body {
 .strength-bar {
   height: 100%;
   width: 0;
-  transition: all 0.3s ease;
+  border-radius: inherit;
+  transition: width 0.3s ease, background-color 0.3s ease;
 }
 
 .strength-text {
@@ -179,15 +181,96 @@ body {
 .strength-weak { background: var(--error); color: var(--error); width: 25%; }
 .strength-medium { background: var(--warning); color: var(--warning); width: 50%; }
 .strength-strong { background: var(--success); color: var(--success); width: 75%; }
-.strength-very-strong { background: var(--primary-color); color: var(--primary-color); width: 100%; }
+.strength-very-strong { background: var(--strong-success); color: var(--strong-success); width: 100%; }
+
+.password-requirements {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.password-requirements li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  transition: color 0.2s ease;
+}
+
+.password-requirements li.met {
+  color: var(--success);
+}
+
+.requirement-icon {
+  width: 14px;
+  flex: 0 0 14px;
+  text-align: center;
+  color: var(--error);
+  font-weight: 700;
+}
+
+.password-requirements li.met .requirement-icon {
+  color: var(--success);
+}
 
 #suggestion-box {
-  background: rgba(79, 70, 229, 0.1);
-  border: 1px dashed var(--primary-color);
-  padding: 10px;
+  background: rgba(15, 23, 42, 0.38);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  padding: 12px;
   border-radius: 8px;
   margin-top: 10px;
   display: none;
+}
+
+.suggestion-title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.password-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.password-suggestion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.password-suggestion code {
+  overflow-wrap: anywhere;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  padding: 7px 8px;
+  font-size: 0.82rem;
+}
+
+.use-password-btn {
+  border: none;
+  border-radius: 6px;
+  background: var(--success);
+  color: white;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 10px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.use-password-btn:hover {
+  background: var(--strong-success);
+  transform: translateY(-1px);
 }
 
 /* Buttons */
@@ -305,4 +388,18 @@ body {
 }
 .otp-expired {
   color: var(--error);
+}
+
+@media (max-width: 520px) {
+  .auth-container {
+    padding: 28px 20px;
+  }
+
+  .password-requirements {
+    grid-template-columns: 1fr;
+  }
+
+  .password-suggestion {
+    grid-template-columns: 1fr;
+  }
 }
