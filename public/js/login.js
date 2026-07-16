@@ -25,6 +25,39 @@ const togglePassword = (inputId, btn) => {
   }
 };
 
+const setOAuthButtonsDisabled = (isDisabled, activeButton = null) => {
+  document.querySelectorAll('.oauth-btn').forEach((button) => {
+    button.classList.toggle('disabled', isDisabled);
+    button.classList.toggle('loading', button === activeButton);
+    button.setAttribute('aria-disabled', String(isDisabled));
+  });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const oauthError = params.get('oauth_error');
+  const authStatus = params.get('auth');
+
+  if (oauthError) {
+    showToast(oauthError, 'error');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (authStatus === 'oauth_success') {
+    showToast('Social login successful!', 'success');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  document.querySelectorAll('.oauth-btn').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      if (button.classList.contains('disabled')) {
+        event.preventDefault();
+        return;
+      }
+
+      setOAuthButtonsDisabled(true, button);
+    });
+  });
+});
+
 // Handle Login Submission
 const loginForm = document.getElementById('login-form');
 if (loginForm) {
@@ -33,6 +66,7 @@ if (loginForm) {
     const btn = document.getElementById('login-btn');
     btn.classList.add('loading');
     btn.disabled = true;
+    setOAuthButtonsDisabled(true);
 
     const loginId = document.getElementById('loginId').value;
     const password = document.getElementById('password').value;
@@ -66,6 +100,7 @@ if (loginForm) {
     } finally {
       btn.classList.remove('loading');
       btn.disabled = false;
+      setOAuthButtonsDisabled(false);
     }
   });
 }

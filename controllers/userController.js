@@ -13,6 +13,9 @@ const getProfile = async (req, res) => {
       username: user.username,
       email: user.email,
       is_verified: user.is_verified,
+      email_verified: user.email_verified,
+      authentication_provider: user.authentication_provider,
+      provider_id: user.provider_id,
       profile_picture: user.profile_picture,
       created_at: user.created_at
     });
@@ -51,6 +54,9 @@ const changePassword = async (req, res) => {
     
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.password) {
+      return res.status(400).json({ message: 'Password changes are only available for local accounts.' });
+    }
 
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Incorrect current password' });

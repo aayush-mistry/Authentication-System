@@ -9,6 +9,19 @@ const emptyStore = {
   users: []
 };
 
+const normalizeUser = (user) => {
+  if (!user) return user;
+
+  user.authentication_provider = user.authentication_provider || 'Local';
+  user.provider_id = user.provider_id || null;
+  user.profile_picture = user.profile_picture || 'default-avatar.png';
+  user.email_verified = typeof user.email_verified === 'boolean' ? user.email_verified : Boolean(user.is_verified);
+  user.is_verified = typeof user.is_verified === 'boolean' ? user.is_verified : Boolean(user.email_verified);
+  user.token_version = Number.isInteger(user.token_version) ? user.token_version : 0;
+
+  return user;
+};
+
 const ensureStore = async () => {
   try {
     await fs.access(usersFile);
@@ -21,7 +34,10 @@ const ensureStore = async () => {
 const readStore = async () => {
   await ensureStore();
   const raw = await fs.readFile(usersFile, 'utf8');
-  return raw.trim() ? JSON.parse(raw) : { ...emptyStore };
+  const store = raw.trim() ? JSON.parse(raw) : { ...emptyStore };
+  store.users = (store.users || []).map(normalizeUser);
+  store.nextId = store.nextId || 1;
+  return store;
 };
 
 const writeStore = async (store) => {
@@ -52,6 +68,14 @@ class User {
     return withoutPasswordCopy(user);
   }
 
+  static async findByProvider(authenticationProvider, providerId) {
+    const store = await readStore();
+    const user = store.users.find((item) => {
+      return item.authentication_provider === authenticationProvider && item.provider_id === providerId;
+    });
+    return withoutPasswordCopy(user);
+  }
+
   static async create(username, email, hashedPassword, otpHash, otpExpiresAt) {
     const store = await readStore();
 
@@ -61,10 +85,13 @@ class User {
       email,
       password: hashedPassword,
       is_verified: false,
+      authentication_provider: 'Local',
+      provider_id: null,
       otp: otpHash,
       otp_expires_at: otpExpiresAt,
       token_version: 0,
       profile_picture: 'default-avatar.png',
+      email_verified: false,
       created_at: new Date().toISOString()
     };
 
@@ -91,9 +118,63 @@ class User {
     if (!user) return;
 
     user.is_verified = true;
+    user.email_verified = true;
     user.otp = null;
     user.otp_expires_at = null;
     await writeStore(store);
+  }
+
+  static async createOAuthUser({ username, email, authenticationProvider, providerId, profilePicture, emailVerified }) {
+    const store = await readStore();
+
+    const duplicate = store.users.find((item) => {
+      return item.email.toLowerCase() === email.toLowerCase() || item.username.toLowerCase() === username.toLowerCase();
+    });
+
+    if (duplicate) {
+      const error = new Error('Username or email already exists');
+      error.code = 'ER_DUP_ENTRY';
+      throw error;
+    }
+
+    const user = {
+      id: store.nextId,
+      username,
+      email,
+      password: null,
+      is_verified: Boolean(emailVerified),
+      authentication_provider: authenticationProvider,
+      provider_id: providerId,
+      otp: null,
+      otp_expires_at: null,
+      token_version: 0,
+      profile_picture: profilePicture || 'default-avatar.png',
+      email_verified: Boolean(emailVerified),
+      created_at: new Date().toISOString()
+    };
+
+    store.nextId += 1;
+    store.users.push(user);
+    await writeStore(store);
+
+    return user;
+  }
+
+  static async linkOAuthProvider(userId, { authenticationProvider, providerId, profilePicture, emailVerified }) {
+    const store = await readStore();
+    const user = store.users.find((item) => item.id === Number(userId));
+    if (!user) return undefined;
+
+    user.authentication_provider = authenticationProvider;
+    user.provider_id = providerId;
+    user.profile_picture = profilePicture || user.profile_picture || 'default-avatar.png';
+    user.email_verified = Boolean(emailVerified || user.email_verified);
+    user.is_verified = Boolean(emailVerified || user.is_verified);
+    user.otp = null;
+    user.otp_expires_at = null;
+
+    await writeStore(store);
+    return withoutPasswordCopy(user);
   }
 
   static async updatePassword(userId, newHashedPassword) {

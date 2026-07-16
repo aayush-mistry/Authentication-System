@@ -13,9 +13,27 @@ const {
   checkUsername,
   checkEmail
 } = require('../controllers/authController');
+const {
+  startGoogleAuth,
+  handleGoogleCallback
+} = require('../controllers/googleAuthController');
+const {
+  startFacebookAuth,
+  handleFacebookCallback
+} = require('../controllers/facebookAuthController');
+const {
+  startLinkedInAuth,
+  handleLinkedInCallback
+} = require('../controllers/linkedinAuthController');
 
 router.get('/check-username', checkUsername);
 router.get('/check-email', checkEmail);
+router.get('/google', startGoogleAuth);
+router.get('/google/callback', handleGoogleCallback);
+router.get('/facebook', startFacebookAuth);
+router.get('/facebook/callback', handleFacebookCallback);
+router.get('/linkedin', startLinkedInAuth);
+router.get('/linkedin/callback', handleLinkedInCallback);
 router.post('/register', register);
 router.post('/verify-otp', verifyOtp);
 router.post('/resend-otp', resendOtp);

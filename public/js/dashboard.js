@@ -35,6 +35,12 @@ if (themeToggleBtn) {
 
 // Fetch Profile Data on Load
 document.addEventListener('DOMContentLoaded', async () => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('auth') === 'oauth_success') {
+    showToast('Social login successful!', 'success');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
   try {
     const res = await fetch('/api/user/profile');
     if (!res.ok) {

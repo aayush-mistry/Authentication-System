@@ -7,6 +7,7 @@ A comprehensive, enterprise-grade Authentication System built from scratch using
 ### Authentication & Authorization
 - User Registration with robust validation
 - Secure Login (via Username or Email)
+- Social Login with Google, Facebook, and LinkedIn OAuth 2.0
 - Stateless JWT Authentication (stored safely in `HttpOnly` cookies)
 - Email Verification (Nodemailer + Ethereal)
 - Secure Password Reset Flow (OTP-based)
@@ -67,13 +68,17 @@ A comprehensive, enterprise-grade Authentication System built from scratch using
        id INT AUTO_INCREMENT PRIMARY KEY,
        username VARCHAR(50) UNIQUE NOT NULL,
        email VARCHAR(100) UNIQUE NOT NULL,
-       password VARCHAR(255) NOT NULL,
+       password VARCHAR(255) NULL,
        is_verified BOOLEAN DEFAULT FALSE,
+       authentication_provider VARCHAR(30) DEFAULT 'Local',
+       provider_id VARCHAR(255) NULL,
+       email_verified BOOLEAN DEFAULT FALSE,
        otp VARCHAR(255) NULL,
        otp_expires_at DATETIME NULL,
        token_version INT DEFAULT 0,
        profile_picture VARCHAR(255) DEFAULT 'default-avatar.png',
-       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       UNIQUE KEY unique_provider_account (authentication_provider, provider_id)
      );
      ```
 
@@ -88,6 +93,20 @@ A comprehensive, enterprise-grade Authentication System built from scratch using
      DB_NAME=auth_system
      JWT_SECRET=supersecretjwtkey_change_me_in_production
      JWT_EXPIRES_IN=1d
+     APP_BASE_URL=http://localhost:3000
+     GOOGLE_CLIENT_ID=your_google_client_id
+     GOOGLE_CLIENT_SECRET=your_google_client_secret
+     FACEBOOK_CLIENT_ID=your_facebook_client_id
+     FACEBOOK_CLIENT_SECRET=your_facebook_client_secret
+     LINKEDIN_CLIENT_ID=your_linkedin_client_id
+     LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
+     ```
+
+   - Configure provider callback URLs in each OAuth console:
+     ```text
+     http://localhost:3000/api/auth/google/callback
+     http://localhost:3000/api/auth/facebook/callback
+     http://localhost:3000/api/auth/linkedin/callback
      ```
 
 5. **Run the server:**

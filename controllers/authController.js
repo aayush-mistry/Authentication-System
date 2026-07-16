@@ -160,6 +160,10 @@ const login = async (req, res) => {
       return res.status(401).json({ message: 'Please verify your email before logging in.', requiresVerification: true, email: user.email });
     }
 
+    if (!user.password) {
+      return res.status(401).json({ message: `Please continue with ${user.authentication_provider} to access this account.` });
+    }
+
     // Check Password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
@@ -169,7 +173,13 @@ const login = async (req, res) => {
 
     res.status(200).json({
       message: 'Login successful',
-      user: { id: user.id, username: user.username, email: user.email, profile_picture: user.profile_picture }
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        authentication_provider: user.authentication_provider,
+        profile_picture: user.profile_picture
+      }
     });
   } catch (error) {
     console.error(error);
@@ -319,6 +329,7 @@ const checkEmail = async (req, res) => {
 
 module.exports = {
   register,
+  generateTokenAndSetCookie,
   verifyOtp,
   resendOtp,
   login,

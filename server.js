@@ -20,7 +20,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
       connectSrc: ["'self'", "http://localhost:3000", "ws://localhost:3000"],
-      imgSrc: ["'self'", "data:"],
+      imgSrc: ["'self'", "data:", "https:"],
     },
   },
 }));
