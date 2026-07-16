@@ -15,14 +15,30 @@ const showToast = (message, type = 'success') => {
 // Toggle Password Visibility
 const togglePassword = (inputId, btn) => {
   const input = document.getElementById(inputId);
+  if (!input || !btn) return;
+
   const icon = btn.querySelector('i');
+  if (!icon) return;
+
   if (input.type === 'password') {
     input.type = 'text';
     icon.className = 'fas fa-eye-slash';
+    btn.setAttribute('aria-label', 'Hide password');
+    btn.setAttribute('title', 'Hide password');
   } else {
     input.type = 'password';
     icon.className = 'fas fa-eye';
+    btn.setAttribute('aria-label', 'Show password');
+    btn.setAttribute('title', 'Show password');
   }
+};
+
+const bindPasswordToggles = () => {
+  document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      togglePassword(button.dataset.passwordToggle, button);
+    });
+  });
 };
 
 const setOAuthButtonsDisabled = (isDisabled, activeButton = null) => {
@@ -34,6 +50,8 @@ const setOAuthButtonsDisabled = (isDisabled, activeButton = null) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+  bindPasswordToggles();
+
   const params = new URLSearchParams(window.location.search);
   const oauthError = params.get('oauth_error');
   const authStatus = params.get('auth');

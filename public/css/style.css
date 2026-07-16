@@ -90,6 +90,10 @@ body {
   transition: all 0.3s ease;
 }
 
+.password-wrapper .form-control {
+  padding-right: 48px;
+}
+
 .form-control:focus {
   outline: none;
   border-color: var(--primary-color);
@@ -103,14 +107,29 @@ body {
 
 .toggle-password {
   position: absolute;
-  right: 12px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.toggle-password:hover,
+.toggle-password:focus-visible {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
 }
 
 /* Validation Status */
