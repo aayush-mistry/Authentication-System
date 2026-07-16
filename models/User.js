@@ -1,70 +1,147 @@
-const db = require('../config/db');
+const fs = require('fs/promises');
+const path = require('path');
+
+const dataDir = path.join(__dirname, '..', 'data');
+const usersFile = path.join(dataDir, 'users.json');
+
+const emptyStore = {
+  nextId: 1,
+  users: []
+};
+
+const ensureStore = async () => {
+  try {
+    await fs.access(usersFile);
+  } catch (error) {
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.writeFile(usersFile, JSON.stringify(emptyStore, null, 2));
+  }
+};
+
+const readStore = async () => {
+  await ensureStore();
+  const raw = await fs.readFile(usersFile, 'utf8');
+  return raw.trim() ? JSON.parse(raw) : { ...emptyStore };
+};
+
+const writeStore = async (store) => {
+  await fs.mkdir(dataDir, { recursive: true });
+  await fs.writeFile(usersFile, JSON.stringify(store, null, 2));
+};
+
+const withoutPasswordCopy = (user) => {
+  return user ? { ...user } : undefined;
+};
 
 class User {
-  // Find a user by email
   static async findByEmail(email) {
-    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-    return rows[0];
+    const store = await readStore();
+    const user = store.users.find((item) => item.email.toLowerCase() === email.toLowerCase());
+    return withoutPasswordCopy(user);
   }
 
-  // Find a user by username
   static async findByUsername(username) {
-    const [rows] = await db.execute('SELECT * FROM users WHERE username = ?', [username]);
-    return rows[0];
+    const store = await readStore();
+    const user = store.users.find((item) => item.username.toLowerCase() === username.toLowerCase());
+    return withoutPasswordCopy(user);
   }
 
-  // Find a user by ID
   static async findById(id) {
-    const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
-    return rows[0];
+    const store = await readStore();
+    const user = store.users.find((item) => item.id === Number(id));
+    return withoutPasswordCopy(user);
   }
 
-  // Create a new user (with token_version)
   static async create(username, email, hashedPassword, otpHash, otpExpiresAt) {
-    const [result] = await db.execute(
-      'INSERT INTO users (username, email, password, is_verified, otp, otp_expires_at, token_version) VALUES (?, ?, ?, false, ?, ?, 0)',
-      [username, email, hashedPassword, otpHash, otpExpiresAt]
-    );
-    return result.insertId;
+    const store = await readStore();
+
+    const user = {
+      id: store.nextId,
+      username,
+      email,
+      password: hashedPassword,
+      is_verified: false,
+      otp: otpHash,
+      otp_expires_at: otpExpiresAt,
+      token_version: 0,
+      profile_picture: 'default-avatar.png',
+      created_at: new Date().toISOString()
+    };
+
+    store.nextId += 1;
+    store.users.push(user);
+    await writeStore(store);
+
+    return user.id;
   }
 
-  // Update OTP details for an existing user (e.g., resend OTP or forgot password)
   static async updateOTP(userId, otpHash, otpExpiresAt) {
-    await db.execute(
-      'UPDATE users SET otp = ?, otp_expires_at = ? WHERE id = ?',
-      [otpHash, otpExpiresAt, userId]
-    );
+    const store = await readStore();
+    const user = store.users.find((item) => item.id === Number(userId));
+    if (!user) return;
+
+    user.otp = otpHash;
+    user.otp_expires_at = otpExpiresAt;
+    await writeStore(store);
   }
 
-  // Verify the user (clear OTP fields and set is_verified to true)
   static async verifyUser(userId) {
-    await db.execute(
-      'UPDATE users SET is_verified = true, otp = NULL, otp_expires_at = NULL WHERE id = ?',
-      [userId]
-    );
+    const store = await readStore();
+    const user = store.users.find((item) => item.id === Number(userId));
+    if (!user) return;
+
+    user.is_verified = true;
+    user.otp = null;
+    user.otp_expires_at = null;
+    await writeStore(store);
   }
 
-  // Update user's password and increment token_version to logout from other devices
   static async updatePassword(userId, newHashedPassword) {
-    await db.execute(
-      'UPDATE users SET password = ?, otp = NULL, otp_expires_at = NULL, token_version = token_version + 1 WHERE id = ?',
-      [newHashedPassword, userId]
-    );
+    const store = await readStore();
+    const user = store.users.find((item) => item.id === Number(userId));
+    if (!user) return;
+
+    user.password = newHashedPassword;
+    user.otp = null;
+    user.otp_expires_at = null;
+    user.token_version += 1;
+    await writeStore(store);
   }
 
-  // Increment token_version (Logout of all devices)
   static async incrementTokenVersion(userId) {
-    await db.execute('UPDATE users SET token_version = token_version + 1 WHERE id = ?', [userId]);
+    const store = await readStore();
+    const user = store.users.find((item) => item.id === Number(userId));
+    if (!user) return;
+
+    user.token_version += 1;
+    await writeStore(store);
   }
 
-  // Update Profile
   static async updateProfile(userId, username, email) {
-    await db.execute('UPDATE users SET username = ?, email = ? WHERE id = ?', [username, email, userId]);
+    const store = await readStore();
+    const existing = store.users.find((item) => item.id === Number(userId));
+    if (!existing) return;
+
+    const duplicate = store.users.find((item) => {
+      if (item.id === Number(userId)) return false;
+      return item.username.toLowerCase() === username.toLowerCase() || item.email.toLowerCase() === email.toLowerCase();
+    });
+
+    if (duplicate) {
+      const error = new Error('Username or email already exists');
+      error.code = 'ER_DUP_ENTRY';
+      throw error;
+    }
+
+    existing.username = username;
+    existing.email = email;
+    await writeStore(store);
   }
 
-  // Delete Account
   static async deleteAccount(userId) {
-    await db.execute('DELETE FROM users WHERE id = ?', [userId]);
+    const store = await readStore();
+    store.users = store.users.filter((item) => item.id !== Number(userId));
+    await writeStore(store);
   }
 }
 
