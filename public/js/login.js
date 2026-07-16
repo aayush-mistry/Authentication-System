@@ -1,15 +1,49 @@
+const toastIcons = {
+  success: 'fa-check-circle',
+  warning: 'fa-triangle-exclamation',
+  error: 'fa-exclamation-circle'
+};
+
+const normalizeToastType = (type) => {
+  return ['success', 'warning', 'error'].includes(type) ? type : 'success';
+};
+
 // Toast Notification System
 const showToast = (message, type = 'success') => {
   const container = document.getElementById('toast-container');
   if (!container) return;
+
+  const toastType = normalizeToastType(type);
   const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-  toast.innerHTML = type === 'success' ? `<i class="fas fa-check-circle"></i> <span>${message}</span>` : `<i class="fas fa-exclamation-circle"></i> <span>${message}</span>`;
+  toast.className = `toast ${toastType}`;
+  toast.setAttribute('role', toastType === 'error' ? 'alert' : 'status');
+
+  const icon = document.createElement('i');
+  icon.className = `fas ${toastIcons[toastType]}`;
+  icon.setAttribute('aria-hidden', 'true');
+
+  const text = document.createElement('span');
+  text.textContent = message;
+
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'toast-close';
+  closeButton.setAttribute('aria-label', 'Dismiss notification');
+
+  const closeIcon = document.createElement('i');
+  closeIcon.className = 'fas fa-xmark';
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeButton.appendChild(closeIcon);
+
+  const dismissToast = () => {
+    toast.style.animation = 'fadeOut 0.25s forwards';
+    setTimeout(() => toast.remove(), 250);
+  };
+
+  closeButton.addEventListener('click', dismissToast);
+  toast.append(icon, text, closeButton);
   container.appendChild(toast);
-  setTimeout(() => {
-    toast.style.animation = 'fadeOut 0.3s forwards';
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  setTimeout(dismissToast, 4500);
 };
 
 // Toggle Password Visibility
@@ -41,30 +75,40 @@ const bindPasswordToggles = () => {
   });
 };
 
+const getSocialButtons = () => Array.from(document.querySelectorAll('.oauth-btn'));
+
 const setOAuthButtonsDisabled = (isDisabled, activeButton = null) => {
-  document.querySelectorAll('.oauth-btn').forEach((button) => {
+  getSocialButtons().forEach((button) => {
+    const isActive = button === activeButton;
+    const label = button.querySelector('.oauth-label');
+
+    if (!button.dataset.defaultLabel && label) {
+      button.dataset.defaultLabel = label.textContent;
+    }
+
     button.classList.toggle('disabled', isDisabled);
-    button.classList.toggle('loading', button === activeButton);
+    button.classList.toggle('loading', isActive);
     button.setAttribute('aria-disabled', String(isDisabled));
+    button.tabIndex = isDisabled ? -1 : 0;
+
+    if (label) {
+      label.textContent = isActive ? 'Redirecting...' : button.dataset.defaultLabel;
+    }
   });
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  bindPasswordToggles();
+const getOAuthErrorType = (message) => {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('cancel')) return 'warning';
+  if (normalized.includes('unavailable') || normalized.includes('not configured')) return 'warning';
+  return 'error';
+};
 
-  const params = new URLSearchParams(window.location.search);
-  const oauthError = params.get('oauth_error');
-  const authStatus = params.get('auth');
+const bindSocialLoginButtons = () => {
+  getSocialButtons().forEach((button) => {
+    const label = button.querySelector('.oauth-label');
+    if (label) button.dataset.defaultLabel = label.textContent;
 
-  if (oauthError) {
-    showToast(oauthError, 'error');
-    window.history.replaceState({}, document.title, window.location.pathname);
-  } else if (authStatus === 'oauth_success') {
-    showToast('Social login successful!', 'success');
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-
-  document.querySelectorAll('.oauth-btn').forEach((button) => {
     button.addEventListener('click', (event) => {
       if (button.classList.contains('disabled')) {
         event.preventDefault();
@@ -74,6 +118,28 @@ document.addEventListener('DOMContentLoaded', () => {
       setOAuthButtonsDisabled(true, button);
     });
   });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  bindPasswordToggles();
+  bindSocialLoginButtons();
+
+  const params = new URLSearchParams(window.location.search);
+  const oauthError = params.get('oauth_error');
+  const authStatus = params.get('auth');
+  const accountCreated = params.get('account_created');
+
+  if (oauthError) {
+    showToast(oauthError, getOAuthErrorType(oauthError));
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (authStatus === 'oauth_success') {
+    showToast(accountCreated === 'true' ? 'Account Created Successfully' : 'Login Successful', 'success');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});
+
+window.addEventListener('pageshow', () => {
+  setOAuthButtonsDisabled(false);
 });
 
 // Handle Login Submission
