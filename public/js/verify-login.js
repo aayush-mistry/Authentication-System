@@ -21,10 +21,11 @@ if (!challengeId) {
 const riskSummary = document.getElementById('risk-summary');
 if (risk && riskSummary) {
   riskSummary.style.display = 'block';
-  riskSummary.innerHTML = `
-    <strong>Security Risk: ${risk.score}% (${risk.level})</strong>
-    <span>${(risk.reasons || []).join(', ')}</span>
-  `;
+  const title = document.createElement('strong');
+  title.textContent = `Security Risk: ${risk.score}% (${risk.level})`;
+  const details = document.createElement('span');
+  details.textContent = (risk.reasons || []).join(', ');
+  riskSummary.append(title, details);
 }
 
 document.getElementById('risk-verify-form').addEventListener('submit', async (event) => {

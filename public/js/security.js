@@ -5,6 +5,13 @@ const state = {
   currentDeviceId: null
 };
 
+const escapeHtml = (value = '') => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
 const showToast = (message, type = 'success') => {
   const container = document.getElementById('toast-container');
   const toast = document.createElement('div');
@@ -44,8 +51,8 @@ const renderSummary = (summary) => {
   ];
   document.getElementById('summary-cards').innerHTML = cards.map(([label, value]) => `
     <article class="summary-card">
-      <span>${label}</span>
-      <strong>${value}</strong>
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
     </article>
   `).join('');
 };
@@ -56,7 +63,7 @@ const renderHeatmap = (analytics) => {
   const max = Math.max(1, ...analytics.heatmap.map((day) => day.total));
   document.getElementById('heatmap').innerHTML = analytics.heatmap.map((day) => {
     const intensity = Math.ceil((day.total / max) * 4);
-    return `<div class="heat-cell level-${intensity}" title="${day.date}: ${day.total} total, ${day.success} successful, ${day.failed} failed"></div>`;
+    return `<div class="heat-cell level-${intensity}" title="${escapeHtml(day.date)}: ${day.total} total, ${day.success} successful, ${day.failed} failed"></div>`;
   }).join('') || '<p class="empty-state">No login activity yet.</p>';
 };
 
@@ -76,12 +83,12 @@ const renderDevices = async () => {
   list.innerHTML = data.devices.map((device) => `
     <article class="device-card ${device.isCurrent ? 'current' : ''}">
       <div>
-        <h3>${device.name}</h3>
-        <p>${device.browser} · ${device.operatingSystem} · ${device.deviceType}</p>
-        <p>${device.ipAddress} · ${formatLocation(device.location)}</p>
+        <h3>${escapeHtml(device.name)}</h3>
+        <p>${escapeHtml(device.browser)} · ${escapeHtml(device.operatingSystem)} · ${escapeHtml(device.deviceType)}</p>
+        <p>${escapeHtml(device.ipAddress)} · ${escapeHtml(formatLocation(device.location))}</p>
         <p>First: ${new Date(device.firstLogin).toLocaleString()}<br>Last: ${new Date(device.lastActive).toLocaleString()}</p>
       </div>
-      <span class="status-pill ${device.status}">${device.status}</span>
+      <span class="status-pill ${escapeHtml(device.status)}">${escapeHtml(device.status)}</span>
       <div class="security-actions">
         <button class="small-action success" data-trust="${device.id}">Trust</button>
         <button class="small-action" data-rename="${device.id}">Rename</button>
@@ -106,15 +113,15 @@ const loadActivity = async () => {
   document.getElementById('page-label').textContent = `Page ${data.page} of ${data.pages}`;
   document.getElementById('activity-rows').innerHTML = data.rows.map((row) => `
     <tr>
-      <td>${new Date(row.timestamp).toLocaleString()}</td>
-      <td>${row.browser}</td>
-      <td>${row.operatingSystem}</td>
-      <td>${row.deviceType}</td>
-      <td>${row.ipAddress}</td>
-      <td>${formatLocation(row.location)}</td>
-      <td>${row.loginMethod}</td>
-      <td><span class="status-pill ${row.status.toLowerCase()}">${row.status}</span></td>
-      <td>${row.riskLevel} (${row.riskScore}%)</td>
+      <td>${escapeHtml(new Date(row.timestamp).toLocaleString())}</td>
+      <td>${escapeHtml(row.browser)}</td>
+      <td>${escapeHtml(row.operatingSystem)}</td>
+      <td>${escapeHtml(row.deviceType)}</td>
+      <td>${escapeHtml(row.ipAddress)}</td>
+      <td>${escapeHtml(formatLocation(row.location))}</td>
+      <td>${escapeHtml(row.loginMethod)}</td>
+      <td><span class="status-pill ${escapeHtml(row.status.toLowerCase())}">${escapeHtml(row.status)}</span></td>
+      <td>${escapeHtml(row.riskLevel)} (${escapeHtml(row.riskScore)}%)</td>
       <td><button class="small-action danger" data-delete-login="${row.id}">Remove</button></td>
     </tr>
   `).join('') || '<tr><td colspan="10" class="empty-state">No matching login activity.</td></tr>';
@@ -122,11 +129,11 @@ const loadActivity = async () => {
 
 const renderLists = (dashboard) => {
   document.getElementById('suspicious-list').innerHTML = dashboard.suspiciousEvents.map((event) => `
-    <article><strong>${event.riskLevel} · ${event.riskScore}%</strong><span>${new Date(event.timestamp).toLocaleString()} · ${(event.reasons || []).join(', ')}</span></article>
+    <article><strong>${escapeHtml(event.riskLevel)} · ${escapeHtml(event.riskScore)}%</strong><span>${escapeHtml(new Date(event.timestamp).toLocaleString())} · ${escapeHtml((event.reasons || []).join(', '))}</span></article>
   `).join('') || '<p class="empty-state">No suspicious events.</p>';
 
   document.getElementById('audit-list').innerHTML = dashboard.auditLogs.map((log) => `
-    <article><strong>${log.eventType}</strong><span>${new Date(log.timestamp).toLocaleString()} · ${log.ipAddress}</span></article>
+    <article><strong>${escapeHtml(log.eventType)}</strong><span>${escapeHtml(new Date(log.timestamp).toLocaleString())} · ${escapeHtml(log.ipAddress)}</span></article>
   `).join('') || '<p class="empty-state">No audit logs yet.</p>';
 };
 

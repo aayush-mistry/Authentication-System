@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, optionalProtect } = require('../middlewares/authMiddleware');
 const {
   register,
   verifyOtp,
@@ -42,7 +42,7 @@ router.post('/login', login);
 router.post('/verify-login-otp', verifyLoginOtp);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
-router.post('/logout', logout);
+router.post('/logout', optionalProtect, logout);
 router.get('/me', protect, getMe); // Protected route
 
 module.exports = router;

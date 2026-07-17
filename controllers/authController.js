@@ -15,6 +15,22 @@ const { buildRequestContext } = require('../utils/requestContext');
 // Helper to generate a 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+const PASSWORD_POLICY_MESSAGE = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+
+const validatePasswordPolicy = (password) => {
+  const passwordStrength = evaluatePasswordStrength(password);
+  if (!passwordStrength.isAcceptable) {
+    return { isValid: false, message: PASSWORD_POLICY_MESSAGE };
+  }
+
+  const commonPasswordValidation = validatePasswordIsNotCommon(password);
+  if (!commonPasswordValidation.isValid) {
+    return commonPasswordValidation;
+  }
+
+  return { isValid: true };
+};
+
 // Helper to generate JWT token and set cookie
 const generateTokenAndSetCookie = (res, userId, tokenVersion) => {
   const token = jwt.sign({ id: userId, version: tokenVersion }, process.env.JWT_SECRET, {
@@ -34,38 +50,37 @@ const generateTokenAndSetCookie = (res, userId, tokenVersion) => {
 const register = async (req, res) => {
   try {
     const { username, email, password, confirmPassword } = req.body;
+    const cleanUsername = String(username || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
 
-    if (!username || !email || !password || !confirmPassword) {
+    if (!cleanUsername || !cleanEmail || !password || !confirmPassword) {
       return res.status(400).json({ message: 'All fields are required' });
     }
     
     // Check basic email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(cleanEmail)) {
       return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ message: 'Username must be at least 3 characters.' });
     }
 
     if (password !== confirmPassword) {
       return res.status(400).json({ message: 'Passwords do not match' });
     }
 
-    const passwordStrength = evaluatePasswordStrength(password);
-    if (!passwordStrength.isAcceptable) {
-      return res.status(400).json({
-        message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
-      });
-    }
-
-    const commonPasswordValidation = validatePasswordIsNotCommon(password);
-    if (!commonPasswordValidation.isValid) {
-      return res.status(400).json({ message: commonPasswordValidation.message });
+    const passwordPolicy = validatePasswordPolicy(password);
+    if (!passwordPolicy.isValid) {
+      return res.status(400).json({ message: passwordPolicy.message });
     }
 
     // Check if user exists
-    const userByEmail = await User.findByEmail(email);
+    const userByEmail = await User.findByEmail(cleanEmail);
     if (userByEmail) return res.status(400).json({ message: 'Email already exists' });
     
-    const userByUsername = await User.findByUsername(username);
+    const userByUsername = await User.findByUsername(cleanUsername);
     if (userByUsername) return res.status(400).json({ message: 'Username already exists' });
 
     // Hash Password
@@ -79,14 +94,19 @@ const register = async (req, res) => {
     const otpExpiresAt = new Date(Date.now() + 60 * 1000); 
 
     // Save User
-    const userId = await User.create(username, email, hashedPassword, otpHash, otpExpiresAt);
+    const userId = await User.create(cleanUsername, cleanEmail, hashedPassword, otpHash, otpExpiresAt);
 
-    // Send OTP via Email
-    await sendEmail({
-      email,
-      subject: 'Verify your email address',
-      message: `Your verification OTP is: ${otp}. It expires in 60 seconds.`,
-    });
+    // Send OTP via Email. Roll the local insert back if delivery fails.
+    try {
+      await sendEmail({
+        email: cleanEmail,
+        subject: 'Verify your email address',
+        message: `Your verification OTP is: ${otp}. It expires in 60 seconds.`,
+      });
+    } catch (emailError) {
+      await User.deleteAccount(userId);
+      throw emailError;
+    }
 
     res.status(201).json({ message: 'Registration successful. Please verify your email.', userId });
   } catch (error) {
@@ -100,8 +120,9 @@ const register = async (req, res) => {
 const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
     
-    const user = await User.findByEmail(email);
+    const user = await User.findByEmail(String(email).trim().toLowerCase());
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.is_verified) return res.status(400).json({ message: 'User already verified' });
 
@@ -134,7 +155,8 @@ const verifyOtp = async (req, res) => {
 const resendOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findByEmail(email);
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+    const user = await User.findByEmail(String(email).trim().toLowerCase());
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     const otp = generateOTP();
@@ -145,7 +167,7 @@ const resendOtp = async (req, res) => {
     await User.updateOTP(user.id, otpHash, otpExpiresAt);
 
     await sendEmail({
-      email,
+      email: user.email,
       subject: 'Your New OTP',
       message: `Your new OTP is: ${otp}. It expires in 60 seconds.`,
     });
@@ -162,13 +184,14 @@ const resendOtp = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { loginId, password } = req.body; // loginId can be email or username
+    const cleanLoginId = String(loginId || '').trim();
 
-    if (!loginId || !password) return res.status(400).json({ message: 'Please provide credentials' });
+    if (!cleanLoginId || !password) return res.status(400).json({ message: 'Please provide credentials' });
 
     // Check if email or username
-    let user = await User.findByEmail(loginId);
+    let user = await User.findByEmail(cleanLoginId);
     if (!user) {
-      user = await User.findByUsername(loginId);
+      user = await User.findByUsername(cleanLoginId);
     }
 
     if (!user) {
@@ -257,8 +280,11 @@ const verifyLoginOtp = async (req, res) => {
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const user = await User.findByEmail(email);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!email) return res.status(400).json({ message: 'Email is required' });
+    const user = await User.findByEmail(String(email).trim().toLowerCase());
+    if (!user) {
+      return res.status(200).json({ message: 'If an account exists, a password reset OTP has been sent.' });
+    }
 
     const otp = generateOTP();
     const salt = await bcrypt.genSalt(10);
@@ -268,12 +294,12 @@ const forgotPassword = async (req, res) => {
     await User.updateOTP(user.id, otpHash, otpExpiresAt);
 
     await sendEmail({
-      email,
+      email: user.email,
       subject: 'Password Reset OTP',
       message: `Your password reset OTP is: ${otp}. It expires in 60 seconds.`,
     });
 
-    res.status(200).json({ message: 'Password reset OTP sent to email.' });
+    res.status(200).json({ message: 'If an account exists, a password reset OTP has been sent.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
@@ -285,25 +311,24 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword, confirmPassword } = req.body;
+    if (!email || !otp || !newPassword || !confirmPassword) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
     if (newPassword !== confirmPassword) {
       return res.status(400).json({ message: 'Passwords do not match' });
     }
 
-    const passwordStrength = evaluatePasswordStrength(newPassword);
-    if (!passwordStrength.isAcceptable) {
-      return res.status(400).json({
-        message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
-      });
+    const passwordPolicy = validatePasswordPolicy(newPassword);
+    if (!passwordPolicy.isValid) {
+      return res.status(400).json({ message: passwordPolicy.message });
     }
 
-    const commonPasswordValidation = validatePasswordIsNotCommon(newPassword);
-    if (!commonPasswordValidation.isValid) {
-      return res.status(400).json({ message: commonPasswordValidation.message });
-    }
-
-    const user = await User.findByEmail(email);
+    const user = await User.findByEmail(String(email).trim().toLowerCase());
     if (!user) return res.status(404).json({ message: 'User not found' });
+    if (user.password && await bcrypt.compare(newPassword, user.password)) {
+      return res.status(400).json({ message: 'New password must be different from your current password.' });
+    }
 
     // Check OTP expiration
     if (!user.otp_expires_at || new Date(user.otp_expires_at).getTime() < Date.now()) {

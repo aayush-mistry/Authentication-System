@@ -2,6 +2,18 @@ const User = require('../models/User');
 const bcrypt = require('bcrypt');
 const { createAuditLog } = require('../services/loginSecurityService');
 const { buildRequestContext } = require('../utils/requestContext');
+const { evaluatePasswordStrength } = require('../utils/passwordStrength');
+const { validatePasswordIsNotCommon } = require('../utils/commonPasswordValidator');
+
+const PASSWORD_POLICY_MESSAGE = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+
+const validatePasswordPolicy = (password) => {
+  const strength = evaluatePasswordStrength(password);
+  if (!strength.isAcceptable) return { isValid: false, message: PASSWORD_POLICY_MESSAGE };
+  const common = validatePasswordIsNotCommon(password);
+  if (!common.isValid) return common;
+  return { isValid: true };
+};
 
 // @desc    Get user profile
 // @route   GET /api/user/profile
@@ -32,15 +44,29 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const { username, email } = req.body;
+    const cleanUsername = String(username || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ message: 'Username must be at least 3 characters.' });
+    }
+
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
     
     // In a real production app, changing an email should require re-verification.
     // For this phase, we'll simply update it.
-    await User.updateProfile(req.userId, username, email);
+    const existing = await User.findById(req.userId);
+    if (!existing) return res.status(404).json({ message: 'User not found' });
+
+    await User.updateProfile(req.userId, cleanUsername, cleanEmail);
     await createAuditLog({
       userId: req.userId,
       context: buildRequestContext(req),
       eventType: 'Email Changed',
-      metadata: { email }
+      metadata: { email: cleanEmail }
     });
     
     res.status(200).json({ message: 'Profile updated successfully' });
@@ -59,6 +85,9 @@ const updateProfile = async (req, res) => {
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Current password and new password are required.' });
+    }
     
     const user = await User.findById(req.userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -68,6 +97,14 @@ const changePassword = async (req, res) => {
 
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Incorrect current password' });
+    if (await bcrypt.compare(newPassword, user.password)) {
+      return res.status(400).json({ message: 'New password must be different from your current password.' });
+    }
+
+    const passwordPolicy = validatePasswordPolicy(newPassword);
+    if (!passwordPolicy.isValid) {
+      return res.status(400).json({ message: passwordPolicy.message });
+    }
 
     const salt = await bcrypt.genSalt(10);
     const hashedNewPassword = await bcrypt.hash(newPassword, salt);

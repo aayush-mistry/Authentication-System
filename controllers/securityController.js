@@ -148,6 +148,9 @@ const getSecurityDashboard = async (req, res) => {
 const emailAction = async (req, res) => {
   try {
     const { token, action } = req.params;
+    if (!['trust', 'secure'].includes(action)) {
+      return res.status(400).send('<h2>Invalid security action</h2>');
+    }
     const result = action === 'secure'
       ? await secureAccountFromEmail(token)
       : await trustDeviceFromEmail(token);

@@ -30,4 +30,21 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+const optionalProtect = async (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
+    if (user && user.token_version === decoded.version) {
+      req.userId = user.id;
+    }
+  } catch (error) {
+    console.error("Optional JWT verification failed:", error.message);
+  }
+
+  next();
+};
+
+module.exports = { protect, optionalProtect };
