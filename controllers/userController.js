@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
+const { createAuditLog } = require('../services/loginSecurityService');
+const { buildRequestContext } = require('../utils/requestContext');
 
 // @desc    Get user profile
 // @route   GET /api/user/profile
@@ -34,6 +36,12 @@ const updateProfile = async (req, res) => {
     // In a real production app, changing an email should require re-verification.
     // For this phase, we'll simply update it.
     await User.updateProfile(req.userId, username, email);
+    await createAuditLog({
+      userId: req.userId,
+      context: buildRequestContext(req),
+      eventType: 'Email Changed',
+      metadata: { email }
+    });
     
     res.status(200).json({ message: 'Profile updated successfully' });
   } catch (error) {
@@ -66,6 +74,11 @@ const changePassword = async (req, res) => {
 
     // This method increments token_version automatically, logging out other devices
     await User.updatePassword(user.id, hashedNewPassword);
+    await createAuditLog({
+      userId: req.userId,
+      context: buildRequestContext(req),
+      eventType: 'Password Changed'
+    });
 
     res.status(200).json({ message: 'Password changed successfully. Other devices logged out.' });
   } catch (error) {
@@ -79,6 +92,11 @@ const changePassword = async (req, res) => {
 const logoutAll = async (req, res) => {
   try {
     await User.incrementTokenVersion(req.userId);
+    await createAuditLog({
+      userId: req.userId,
+      context: buildRequestContext(req),
+      eventType: 'Logout All Devices'
+    });
     
     // Clear current cookie too
     res.cookie('token', '', { httpOnly: true, expires: new Date(0) });
@@ -95,6 +113,11 @@ const logoutAll = async (req, res) => {
 const deleteAccount = async (req, res) => {
   try {
     await User.deleteAccount(req.userId);
+    await createAuditLog({
+      userId: req.userId,
+      context: buildRequestContext(req),
+      eventType: 'Account Deleted'
+    });
     res.cookie('token', '', { httpOnly: true, expires: new Date(0) });
     res.status(200).json({ message: 'Account deleted successfully' });
   } catch (error) {

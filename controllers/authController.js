@@ -4,6 +4,13 @@ const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/email');
 const { evaluatePasswordStrength } = require('../utils/passwordStrength');
 const { validatePasswordIsNotCommon } = require('../utils/commonPasswordValidator');
+const {
+  recordFailedLogin,
+  handleSuccessfulLogin,
+  verifyChallenge,
+  createAuditLog
+} = require('../services/loginSecurityService');
+const { buildRequestContext } = require('../utils/requestContext');
 
 // Helper to generate a 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -109,6 +116,11 @@ const verifyOtp = async (req, res) => {
 
     // Update DB
     await User.verifyUser(user.id);
+    await createAuditLog({
+      userId: user.id,
+      context: buildRequestContext(req),
+      eventType: 'OTP Verification'
+    });
 
     res.status(200).json({ message: 'Email verified successfully! You can now log in.' });
   } catch (error) {
@@ -159,20 +171,38 @@ const login = async (req, res) => {
       user = await User.findByUsername(loginId);
     }
 
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user) {
+      await recordFailedLogin({ req, method: 'Password', reason: 'Unknown account' });
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     // Check if verified
     if (!user.is_verified) {
+      await recordFailedLogin({ req, userId: user.id, method: 'Password', reason: 'Email not verified' });
       return res.status(401).json({ message: 'Please verify your email before logging in.', requiresVerification: true, email: user.email });
     }
 
     if (!user.password) {
+      await recordFailedLogin({ req, userId: user.id, method: 'Password', reason: 'Provider account used password login' });
       return res.status(401).json({ message: `Please continue with ${user.authentication_provider} to access this account.` });
     }
 
     // Check Password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!isMatch) {
+      await recordFailedLogin({ req, userId: user.id, method: 'Password', reason: 'Invalid password' });
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const security = await handleSuccessfulLogin({ req, user, method: 'Password', deferSession: true });
+    if (security.requiresAdditionalVerification) {
+      return res.status(202).json({
+        message: 'Additional verification required for this login.',
+        requiresAdditionalVerification: true,
+        challengeId: security.challenge.id,
+        risk: security.risk
+      });
+    }
 
     // Generate token and set cookie
     generateTokenAndSetCookie(res, user.id, user.token_version);
@@ -185,8 +215,37 @@ const login = async (req, res) => {
         email: user.email,
         authentication_provider: user.authentication_provider,
         profile_picture: user.profile_picture
+      },
+      security: {
+        risk: security.risk,
+        notice: security.notice
       }
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+};
+
+// @desc    Verify risk-based login OTP
+// @route   POST /api/auth/verify-login-otp
+const verifyLoginOtp = async (req, res) => {
+  try {
+    const { challengeId, otp } = req.body;
+    if (!challengeId || !otp) {
+      return res.status(400).json({ message: 'Verification code is required.' });
+    }
+
+    const result = await verifyChallenge({ challengeId, otp });
+    if (!result.ok) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    const user = await User.findById(result.challenge.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    generateTokenAndSetCookie(res, user.id, user.token_version);
+    res.status(200).json({ message: 'Login verified successfully.' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server Error' });
@@ -260,6 +319,11 @@ const resetPassword = async (req, res) => {
     const newHashedPassword = await bcrypt.hash(newPassword, salt);
 
     await User.updatePassword(user.id, newHashedPassword);
+    await createAuditLog({
+      userId: user.id,
+      context: buildRequestContext(req),
+      eventType: 'Password Reset'
+    });
 
     res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
   } catch (error) {
@@ -270,7 +334,16 @@ const resetPassword = async (req, res) => {
 
 // @desc    Logout user
 // @route   POST /api/auth/logout
-const logout = (req, res) => {
+const logout = async (req, res) => {
+  try {
+    await createAuditLog({
+      userId: req.userId || null,
+      context: buildRequestContext(req),
+      eventType: 'Logout'
+    });
+  } catch (error) {
+    console.error(error);
+  }
   res.cookie('token', '', { httpOnly: true, expires: new Date(0) });
   res.status(200).json({ message: 'Logged out successfully' });
 };
@@ -344,6 +417,7 @@ module.exports = {
   verifyOtp,
   resendOtp,
   login,
+  verifyLoginOtp,
   forgotPassword,
   resetPassword,
   logout,

@@ -6,6 +6,7 @@ const {
   verifyOtp,
   resendOtp,
   login,
+  verifyLoginOtp,
   forgotPassword,
   resetPassword,
   logout,
@@ -38,6 +39,7 @@ router.post('/register', register);
 router.post('/verify-otp', verifyOtp);
 router.post('/resend-otp', resendOtp);
 router.post('/login', login);
+router.post('/verify-login-otp', verifyLoginOtp);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/logout', logout);

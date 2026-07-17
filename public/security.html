@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Center - Auth System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="security-page">
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <main class="security-shell">
+    <header class="security-header">
+      <div>
+        <h1>Security Center</h1>
+        <p>Review trusted devices, login activity, risk events, and audit history.</p>
+      </div>
+      <a href="index.html" class="btn security-back"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    </header>
+
+    <section id="new-device-card" class="security-alert" style="display:none;">
+      <strong>New Device Login Detected</strong>
+      <span id="new-device-details"></span>
+      <div class="security-actions">
+        <button id="trust-current-device" class="small-action success">Trust This Device</button>
+        <button id="review-later" class="small-action">Review Later</button>
+      </div>
+    </section>
+
+    <section id="summary-cards" class="summary-grid"></section>
+
+    <section class="security-section">
+      <div class="section-heading">
+        <h2>Login Heatmap</h2>
+        <span id="analytics-summary"></span>
+      </div>
+      <div id="heatmap" class="login-heatmap"></div>
+    </section>
+
+    <section class="security-section">
+      <div class="section-heading">
+        <h2>Trusted Devices</h2>
+        <span>Current device is highlighted.</span>
+      </div>
+      <div id="devices-list" class="device-grid loading-skeleton"></div>
+    </section>
+
+    <section class="security-section">
+      <div class="section-heading">
+        <h2>Login Activity</h2>
+        <button id="export-csv" class="small-action"><i class="fas fa-download"></i> Export CSV</button>
+      </div>
+      <div class="activity-filters">
+        <input id="activity-search" class="form-control" placeholder="Search activity">
+        <input id="filter-from" class="form-control" type="date">
+        <input id="filter-to" class="form-control" type="date">
+        <select id="filter-status" class="form-control">
+          <option>All</option>
+          <option>Success</option>
+          <option>Failed</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="security-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Browser</th>
+              <th>OS</th>
+              <th>Device</th>
+              <th>IP</th>
+              <th>Location</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th>Risk</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="activity-rows"></tbody>
+        </table>
+      </div>
+      <div class="pagination-row">
+        <button id="prev-page" class="small-action">Previous</button>
+        <span id="page-label"></span>
+        <button id="next-page" class="small-action">Next</button>
+      </div>
+    </section>
+
+    <section class="security-section split-section">
+      <div>
+        <div class="section-heading">
+          <h2>Suspicious Events</h2>
+        </div>
+        <div id="suspicious-list" class="compact-list"></div>
+      </div>
+      <div>
+        <div class="section-heading">
+          <h2>Audit Logs</h2>
+        </div>
+        <div id="audit-list" class="compact-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/security.js"></script>
+</body>
+</html>

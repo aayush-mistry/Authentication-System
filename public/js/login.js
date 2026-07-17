@@ -165,6 +165,16 @@ if (loginForm) {
       const data = await res.json();
       
       if (res.ok) {
+        if (data.requiresAdditionalVerification) {
+          sessionStorage.setItem('loginChallengeId', data.challengeId);
+          sessionStorage.setItem('loginRisk', JSON.stringify(data.risk || {}));
+          showToast('Additional verification required.', 'warning');
+          setTimeout(() => {
+            window.location.href = 'verify-login.html';
+          }, 900);
+          return;
+        }
+
         showToast('Login successful! Redirecting...', 'success');
         setTimeout(() => {
           window.location.href = 'index.html'; // Redirect to Dashboard

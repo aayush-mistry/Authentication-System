@@ -6,6 +6,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
+const securityRoutes = require('./routes/securityRoutes');
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/security', securityRoutes);
 
 // Fallback for SPA/Frontend routes (Optional but good practice)
 // This serves index.html for any unhandled GET routes, letting frontend handle 404s

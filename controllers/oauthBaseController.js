@@ -2,6 +2,7 @@ const providers = require('../config/oauthProviders');
 const { createOAuthState, verifyOAuthState, STATE_MAX_AGE_MS } = require('../utils/oauthState');
 const { authenticateOAuthUser, OAuthError } = require('../services/oauthService');
 const { generateTokenAndSetCookie } = require('./authController');
+const { handleSuccessfulLogin } = require('../services/loginSecurityService');
 
 const stateCookieName = (providerKey) => `oauth_state_${providerKey}`;
 
@@ -69,6 +70,7 @@ const handleOAuthCallback = (providerKey) => async (req, res) => {
     }
 
     const user = await authenticateOAuthUser({ providerKey, provider, code });
+    await handleSuccessfulLogin({ req, user, method: provider.name, deferSession: false });
     generateTokenAndSetCookie(res, user.id, user.token_version);
 
     res.clearCookie(cookieName);
