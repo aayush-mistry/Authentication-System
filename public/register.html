@@ -60,6 +60,18 @@
           <li data-requirement="special"><span class="requirement-icon">✗</span> Special character</li>
         </ul>
 
+        <div id="common-password-warning" class="password-warning" aria-live="polite">
+          <div class="password-warning-title">Common Password Detected</div>
+          <ul>
+            <li>Use at least 12 characters.</li>
+            <li>Include uppercase and lowercase letters.</li>
+            <li>Include numbers and special characters.</li>
+            <li>Avoid common words and predictable patterns.</li>
+          </ul>
+          <div class="suggestion-title">Secure alternatives</div>
+          <div id="common-password-suggestions" class="password-suggestions"></div>
+        </div>
+
         <!-- Password Suggestion Box -->
         <div id="suggestion-box">
           <div class="suggestion-title">Suggested Passwords</div>
@@ -91,6 +103,7 @@
     </div>
   </div>
 
+  <script src="js/passwordPolicy.js"></script>
   <script src="js/auth.js"></script>
 </body>
 </html>

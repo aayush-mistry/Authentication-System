@@ -152,6 +152,8 @@ if (emailInput) {
 
 const passwordInput = document.getElementById('password');
 const confirmPasswordInput = document.getElementById('confirmPassword');
+const commonPasswordWarning = document.getElementById('common-password-warning');
+const commonPasswordSuggestions = document.getElementById('common-password-suggestions');
 const strengthConfig = {
   Weak: { className: 'strength-weak', icon: '🔴', color: 'var(--error)' },
   Medium: { className: 'strength-medium', icon: '🟡', color: 'var(--warning)' },
@@ -204,6 +206,10 @@ const shuffleSecure = (characters) => {
 };
 
 const generateStrongPassword = (length = 14) => {
+  if (window.passwordPolicy) {
+    return window.passwordPolicy.generateSecurePassword(length);
+  }
+
   const groups = [
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
     'abcdefghijklmnopqrstuvwxyz',
@@ -282,6 +288,13 @@ const updatePasswordStrengthUI = () => {
   const suggestionBox = document.getElementById('suggestion-box');
   const result = evaluatePasswordStrength(password);
   const config = strengthConfig[result.label];
+  const commonPasswordDetected = window.passwordPolicy
+    ? window.passwordPolicy.setCommonPasswordWarning({
+        passwordInput,
+        warningBox: commonPasswordWarning,
+        suggestionsContainer: commonPasswordSuggestions
+      })
+    : false;
 
   strengthBar.className = 'strength-bar';
   updateRequirements(result.checks);
@@ -289,15 +302,16 @@ const updatePasswordStrengthUI = () => {
   if (!password) {
     strengthText.textContent = '';
     suggestionBox.style.display = 'none';
+    if (commonPasswordWarning) commonPasswordWarning.style.display = 'none';
     updateConfirmPasswordFeedback();
     return result;
   }
 
   strengthBar.classList.add(config.className);
-  strengthText.textContent = `${config.icon} ${result.label}`;
-  strengthText.style.color = config.color;
+  strengthText.textContent = commonPasswordDetected ? 'Common Password Detected' : `${config.icon} ${result.label}`;
+  strengthText.style.color = commonPasswordDetected ? 'var(--error)' : config.color;
 
-  if (result.label === 'Weak' || result.label === 'Medium') {
+  if (!commonPasswordDetected && (result.label === 'Weak' || result.label === 'Medium')) {
     renderPasswordSuggestions();
     suggestionBox.style.display = 'block';
   } else {
@@ -309,6 +323,9 @@ const updatePasswordStrengthUI = () => {
 };
 
 if (passwordInput) {
+  if (window.passwordPolicy) {
+    window.passwordPolicy.loadCommonPasswordList().then(updatePasswordStrengthUI);
+  }
   passwordInput.addEventListener('input', updatePasswordStrengthUI);
 }
 
@@ -336,6 +353,11 @@ if (registerForm) {
     }
 
     const strengthResult = updatePasswordStrengthUI();
+    if (window.passwordPolicy && window.passwordPolicy.isCommonPassword(document.getElementById('password').value)) {
+      showToast(window.passwordPolicy.COMMON_PASSWORD_MESSAGE, 'error');
+      return;
+    }
+
     if (!strengthResult.isAcceptable) {
       showToast('Use at least 8 characters with uppercase, lowercase, number, and special character.', 'error');
       return;

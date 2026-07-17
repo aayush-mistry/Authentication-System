@@ -3,6 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const sendEmail = require('../utils/email');
 const { evaluatePasswordStrength } = require('../utils/passwordStrength');
+const { validatePasswordIsNotCommon } = require('../utils/commonPasswordValidator');
 
 // Helper to generate a 6-digit OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
@@ -46,6 +47,11 @@ const register = async (req, res) => {
       return res.status(400).json({
         message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
       });
+    }
+
+    const commonPasswordValidation = validatePasswordIsNotCommon(password);
+    if (!commonPasswordValidation.isValid) {
+      return res.status(400).json({ message: commonPasswordValidation.message });
     }
 
     // Check if user exists
@@ -230,6 +236,11 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({
         message: 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.'
       });
+    }
+
+    const commonPasswordValidation = validatePasswordIsNotCommon(newPassword);
+    if (!commonPasswordValidation.isValid) {
+      return res.status(400).json({ message: commonPasswordValidation.message });
     }
 
     const user = await User.findByEmail(email);
